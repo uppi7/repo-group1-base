@@ -1,0 +1,45 @@
+# GitHub Actions CI：每次推送 main 分支自动构建双端镜像并推送到 ghcr.io
+# GitHub-hosted runner 自带 Docker，无需配置任何 Runner
+
+name: Build & Push Images
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:       # 允许在 Actions 页面手动触发
+
+permissions:
+  contents: read           # checkout 私有仓库必须
+  packages: write          # 写入 ghcr.io 必须
+
+jobs:
+
+  build-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build and push backend image
+        run: |
+          IMAGE=ghcr.io/${{ github.repository_owner }}/zjuse-backend-base
+          docker build -t ${IMAGE}:${{ github.sha }} -t ${IMAGE}:latest ./backend
+          docker push ${IMAGE}:${{ github.sha }}
+          docker push ${IMAGE}:latest
+
+  build-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build and push frontend image
+        run: |
+          IMAGE=ghcr.io/${{ github.repository_owner }}/zjuse-frontend-base
+          docker build -t ${IMAGE}:${{ github.sha }} -t ${IMAGE}:latest ./frontend
+          docker push ${IMAGE}:${{ github.sha }}
+          docker push ${IMAGE}:latest
